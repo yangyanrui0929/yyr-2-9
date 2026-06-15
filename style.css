@@ -348,6 +348,384 @@ body {
     margin-top: 4px;
 }
 
+.program-themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 4px;
+}
+
+.theme-tag {
+    font-size: 9px;
+    padding: 2px 5px;
+    background: rgba(243, 156, 18, 0.2);
+    color: #f39c12;
+    border-radius: 3px;
+}
+
+.program-rating {
+    margin-top: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.reach-score {
+    font-size: 10px;
+    opacity: 0.85;
+}
+
+.rating-excellent {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+}
+
+.rating-good {
+    background: rgba(52, 152, 219, 0.2);
+    color: #3498db;
+}
+
+.rating-normal {
+    background: rgba(243, 156, 18, 0.2);
+    color: #f39c12;
+}
+
+.rating-poor {
+    background: rgba(230, 126, 34, 0.2);
+    color: #e67e22;
+}
+
+.rating-bad {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+}
+
+.slot-rating {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+    font-weight: normal;
+}
+
+.schedule-tip {
+    font-size: 12px;
+    color: #888;
+    font-weight: normal;
+    cursor: help;
+    border-bottom: 1px dashed #666;
+}
+
+.audience-info-wrapper {
+    padding: 0 12px;
+    margin-bottom: 8px;
+}
+
+.audience-info-panel {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(52, 152, 219, 0.3);
+    border-radius: 6px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.audience-info-section {
+    min-width: 0;
+}
+
+.audience-info-title {
+    font-size: 12px;
+    color: #3498db;
+    font-weight: bold;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+.audience-rate-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.audience-rate-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+}
+
+.audience-icon {
+    font-size: 14px;
+    min-width: 18px;
+}
+
+.audience-name {
+    min-width: 60px;
+    color: #ccc;
+}
+
+.audience-rate-bar {
+    flex: 1;
+    height: 5px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.audience-rate-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+    transition: width 0.3s;
+}
+
+.audience-rate-value {
+    min-width: 32px;
+    text-align: right;
+    color: #3498db;
+    font-weight: bold;
+}
+
+.district-reach-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.district-reach-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    flex-wrap: wrap;
+}
+
+.district-type-icon {
+    font-size: 13px;
+    min-width: 16px;
+}
+
+.district-reach-name {
+    color: #ccc;
+    min-width: 35px;
+}
+
+.district-type-label {
+    font-size: 9px;
+    color: #888;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1px 4px;
+    border-radius: 2px;
+    min-width: 45px;
+}
+
+.district-reach-bar {
+    flex: 1;
+    min-width: 50px;
+    height: 5px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.district-reach-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f39c12, #e94560);
+    transition: width 0.3s;
+}
+
+.district-reach-value {
+    min-width: 30px;
+    text-align: right;
+    color: #f39c12;
+    font-weight: bold;
+}
+
+.broadcast-reach-analysis {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(233, 69, 96, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.reach-analysis-title {
+    font-size: 14px;
+    color: #e94560;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.reach-analysis-summary {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding: 10px;
+    background: rgba(233, 69, 96, 0.1);
+    border-radius: 6px;
+}
+
+.best-slot-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.warn-slot-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.avg-reach-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: rgba(52, 152, 219, 0.2);
+    color: #3498db;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.slot-analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.slot-analysis-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.slot-analysis-card.best {
+    border-color: rgba(46, 204, 113, 0.5);
+    background: rgba(46, 204, 113, 0.08);
+}
+
+.slot-analysis-card.poor {
+    border-color: rgba(231, 76, 60, 0.5);
+    background: rgba(231, 76, 60, 0.08);
+}
+
+.slot-analysis-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.slot-analysis-score {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.slot-analysis-detail {
+    font-size: 10px;
+    color: #888;
+    line-height: 1.5;
+}
+
+.district-match-list {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.district-match-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    padding: 2px 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+}
+
+.district-match-item.good {
+    border-left: 2px solid #2ecc71;
+}
+
+.district-match-item.bad {
+    border-left: 2px solid #e74c3c;
+}
+
+.district-match-item.neutral {
+    border-left: 2px solid #f39c12;
+}
+
+.theme-match-desc {
+    font-size: 10px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    margin-top: 4px;
+    display: inline-block;
+}
+
+.theme-match-desc.preferred {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+}
+
+.theme-match-desc.disliked {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+}
+
+.theme-match-desc.neutral {
+    background: rgba(243, 156, 18, 0.2);
+    color: #f39c12;
+}
+
+.broadcast-item-themes {
+    display: flex;
+    gap: 3px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.empty-analysis {
+    color: #666;
+    text-align: center;
+    padding: 20px;
+    font-size: 13px;
+}
+
+@media (max-width: 992px) {
+    .audience-info-panel {
+        grid-template-columns: 1fr;
+    }
+    .slot-analysis-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .broadcast-list {
     display: flex;
     flex-direction: column;

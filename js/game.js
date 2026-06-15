@@ -275,8 +275,13 @@ class UndergroundRadioGame {
         ['morning', 'afternoon', 'evening'].forEach(slot => {
             const optionsContainer = document.getElementById(slot + 'Options');
             const slotDisplay = document.getElementById('slot' + slot.charAt(0).toUpperCase() + slot.slice(1));
+            const audienceInfo = document.getElementById(slot + 'AudienceInfo');
             
             optionsContainer.innerHTML = '';
+
+            if (audienceInfo) {
+                this.renderSlotAudienceInfo(audienceInfo, slot);
+            }
             
             GameData.programTypes.forEach(program => {
                 const btn = document.createElement('button');
@@ -288,10 +293,26 @@ class UndergroundRadioGame {
                 const effectsText = Object.entries(program.effects)
                     .map(([k, v]) => `${this.getStatName(k)} ${v > 0 ? '+' : ''}${v}`)
                     .join(', ');
+
+                const reachInfo = this.getProgramReachInfo(program.id, slot);
+                const ratingHtml = reachInfo ? `
+                    <div class="program-rating ${reachInfo.overallRating.class}">
+                        ${reachInfo.overallRating.icon} ${reachInfo.overallRating.text}
+                        <span class="reach-score">预计触达: ${reachInfo.totalEffectiveReach}%</span>
+                    </div>
+                ` : '';
+
+                const themesHtml = program.themes && program.themes.length > 0 ? `
+                    <div class="program-themes">
+                        ${program.themes.map(t => `<span class="theme-tag">${this.getThemeName(t)}</span>`).join('')}
+                    </div>
+                ` : '';
                 
                 btn.innerHTML = `
                     <div>${program.name}</div>
+                    ${themesHtml}
                     <div class="program-effects">${effectsText} | ⚡${program.power}</div>
+                    ${ratingHtml}
                 `;
                 
                 btn.addEventListener('click', () => this.selectProgram(slot, program.id));
@@ -301,11 +322,85 @@ class UndergroundRadioGame {
             const current = this.gameState.schedule[slot];
             if (current) {
                 const program = GameData.programTypes.find(p => p.id === current);
-                slotDisplay.textContent = program ? program.name : '未安排';
+                const reachInfo = this.getProgramReachInfo(current, slot);
+                if (program && reachInfo) {
+                    slotDisplay.innerHTML = `
+                        ${program.name}
+                        <span class="slot-rating ${reachInfo.overallRating.class}">
+                            ${reachInfo.overallRating.icon} 触达${reachInfo.totalEffectiveReach}%
+                        </span>
+                    `;
+                } else {
+                    slotDisplay.textContent = program ? program.name : '未安排';
+                }
             } else {
                 slotDisplay.textContent = '未安排';
             }
         });
+    }
+
+    renderSlotAudienceInfo(container, slot) {
+        const slotInfo = GameData.timeSlots[slot];
+        const allAudienceData = [];
+
+        Object.keys(GameData.audienceGroups).forEach(audId => {
+            const rate = GameData.audienceSchedule[slot][audId] || 0;
+            allAudienceData.push({
+                id: audId,
+                ...GameData.audienceGroups[audId],
+                rate: rate
+            });
+        });
+        allAudienceData.sort((a, b) => b.rate - a.rate);
+
+        const districtSummary = [];
+        this.gameState.districts.forEach(district => {
+            const districtType = this.getDistrictType(district.id);
+            if (districtType) {
+                const reach = this.getAudienceReach(slot, districtType);
+                districtSummary.push({
+                    district: district,
+                    districtType: districtType,
+                    reach: reach
+                });
+            }
+        });
+
+        container.innerHTML = `
+            <div class="audience-info-panel">
+                <div class="audience-info-section">
+                    <div class="audience-info-title">📊 ${slotInfo.name} 听众活跃度</div>
+                    <div class="audience-rate-list">
+                        ${allAudienceData.map(a => `
+                            <div class="audience-rate-item" title="收听率 ${Math.round(a.rate * 100)}%">
+                                <span class="audience-icon">${a.icon}</span>
+                                <span class="audience-name">${a.name.replace(/^[^\s]+\s/, '')}</span>
+                                <div class="audience-rate-bar">
+                                    <div class="audience-rate-fill" style="width:${a.rate * 100}%"></div>
+                                </div>
+                                <span class="audience-rate-value">${Math.round(a.rate * 100)}%</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="audience-info-section">
+                    <div class="audience-info-title">🏙️ 各城区收听情况</div>
+                    <div class="district-reach-list">
+                        ${districtSummary.map(d => `
+                            <div class="district-reach-item">
+                                <span class="district-type-icon">${d.districtType.icon}</span>
+                                <span class="district-reach-name">${d.district.name}</span>
+                                <span class="district-type-label">${d.districtType.name}</span>
+                                <div class="district-reach-bar">
+                                    <div class="district-reach-fill" style="width:${d.reach.total}%"></div>
+                                </div>
+                                <span class="district-reach-value">${d.reach.total}%</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     renderBroadcasts() {
@@ -318,15 +413,33 @@ class UndergroundRadioGame {
             if (this.gameState.selectedBroadcast === msg.id) {
                 item.classList.add('selected');
             }
+
+            const themesHtml = msg.themes && msg.themes.length > 0 ? `
+                <div class="broadcast-item-themes">
+                    ${msg.themes.map(t => `<span class="theme-tag">${this.getThemeName(t)}</span>`).join('')}
+                </div>
+            ` : '';
             
             item.innerHTML = `
                 <div class="broadcast-title">${msg.title}</div>
                 <div class="broadcast-desc">${msg.content}</div>
+                ${themesHtml}
             `;
             
             item.addEventListener('click', () => this.selectBroadcast(msg.id));
             container.appendChild(item);
         });
+
+        const analysisContainer = document.getElementById('broadcastReachAnalysis');
+        if (analysisContainer) {
+            if (this.gameState.todayActions.broadcastDone) {
+                analysisContainer.innerHTML = '<div class="empty-analysis">✅ 今日播报已完成，明日可继续播报</div>';
+            } else if (this.gameState.selectedBroadcast) {
+                this.renderBroadcastReachAnalysis(this.gameState.selectedBroadcast);
+            } else {
+                analysisContainer.innerHTML = '<div class="empty-analysis">📊 选择消息后可查看各时段传播效果分析</div>';
+            }
+        }
 
         document.getElementById('doBroadcastBtn').disabled = 
             !this.gameState.selectedBroadcast || this.gameState.todayActions.broadcastDone;
@@ -477,6 +590,181 @@ class UndergroundRadioGame {
         });
     }
 
+    getDistrictType(districtId) {
+        const district = this.gameState.districts.find(d => d.id === districtId);
+        if (!district) return null;
+        return GameData.districtTypes[district.type];
+    }
+
+    getAudienceReach(slot, districtType) {
+        if (!districtType) return { total: 0, audiences: [] };
+        const schedule = GameData.audienceSchedule[slot];
+        if (!schedule) return { total: 0, audiences: [] };
+
+        const audiences = [];
+        let totalWeight = 0;
+
+        districtType.primaryAudience.forEach(audId => {
+            const rate = schedule[audId] || 0;
+            const weight = rate * 1.5;
+            totalWeight += weight;
+            audiences.push({
+                id: audId,
+                ...GameData.audienceGroups[audId],
+                rate: rate,
+                isPrimary: true,
+                weight: weight
+            });
+        });
+
+        Object.keys(GameData.audienceGroups).forEach(audId => {
+            if (!districtType.primaryAudience.includes(audId)) {
+                const rate = schedule[audId] || 0;
+                const weight = rate * 0.5;
+                totalWeight += weight;
+                if (rate > 0.3) {
+                    audiences.push({
+                        id: audId,
+                        ...GameData.audienceGroups[audId],
+                        rate: rate,
+                        isPrimary: false,
+                        weight: weight
+                    });
+                }
+            }
+        });
+
+        audiences.sort((a, b) => b.weight - a.weight);
+
+        return {
+            total: Math.min(100, Math.round(totalWeight * 20)),
+            audiences: audiences
+        };
+    }
+
+    getThemeMatch(themes, districtType) {
+        if (!districtType || !themes || themes.length === 0) {
+            return { level: 'neutral', multiplier: 1.0, desc: '无主题偏好' };
+        }
+
+        let preferredCount = 0;
+        let dislikedCount = 0;
+
+        themes.forEach(theme => {
+            if (districtType.preferredThemes.includes(theme)) preferredCount++;
+            if (districtType.dislikedThemes.includes(theme)) dislikedCount++;
+        });
+
+        if (preferredCount > dislikedCount) {
+            return {
+                level: 'preferred',
+                multiplier: GameData.themePreferenceMultiplier.preferred,
+                desc: '符合受众偏好，效果提升 50%'
+            };
+        } else if (dislikedCount > preferredCount) {
+            return {
+                level: 'disliked',
+                multiplier: GameData.themePreferenceMultiplier.disliked,
+                desc: '不符合受众偏好，效果降低 50%'
+            };
+        }
+        return {
+            level: 'neutral',
+            multiplier: GameData.themePreferenceMultiplier.neutral,
+            desc: '主题匹配度一般'
+        };
+    }
+
+    getProgramReachInfo(programId, slot) {
+        const program = GameData.programTypes.find(p => p.id === programId);
+        if (!program) return null;
+
+        const districtResults = [];
+        let totalEffectiveReach = 0;
+        let avgMultiplier = 0;
+
+        this.gameState.districts.forEach(district => {
+            const districtType = this.getDistrictType(district.id);
+            const reach = this.getAudienceReach(slot, districtType);
+            const themeMatch = this.getThemeMatch(program.themes, districtType);
+            const effectiveReach = Math.round(reach.total * themeMatch.multiplier);
+
+            districtResults.push({
+                district: district,
+                districtType: districtType,
+                reach: reach,
+                themeMatch: themeMatch,
+                effectiveReach: effectiveReach,
+                trustWeight: district.trust / 100
+            });
+
+            totalEffectiveReach += effectiveReach * (district.trust / 100);
+            avgMultiplier += themeMatch.multiplier;
+        });
+
+        avgMultiplier = avgMultiplier / this.gameState.districts.length;
+        totalEffectiveReach = Math.min(100, Math.round(totalEffectiveReach / this.gameState.districts.length));
+
+        return {
+            program: program,
+            slot: slot,
+            districtResults: districtResults,
+            totalEffectiveReach: totalEffectiveReach,
+            avgMultiplier: avgMultiplier,
+            overallRating: this.getOverallRating(avgMultiplier, totalEffectiveReach)
+        };
+    }
+
+    getBroadcastReachInfo(broadcastId) {
+        const broadcast = GameData.broadcastMessages.find(m => m.id === broadcastId);
+        if (!broadcast) return null;
+
+        const districtResults = [];
+        let totalEffectiveReach = 0;
+        let avgMultiplier = 0;
+
+        ['morning', 'afternoon', 'evening'].forEach(slot => {
+            this.gameState.districts.forEach(district => {
+                const districtType = this.getDistrictType(district.id);
+                const reach = this.getAudienceReach(slot, districtType);
+                const themeMatch = this.getThemeMatch(broadcast.themes, districtType);
+                const effectiveReach = Math.round(reach.total * themeMatch.multiplier);
+
+                districtResults.push({
+                    slot: slot,
+                    district: district,
+                    districtType: districtType,
+                    reach: reach,
+                    themeMatch: themeMatch,
+                    effectiveReach: effectiveReach
+                });
+
+                totalEffectiveReach += effectiveReach * (district.trust / 100);
+                avgMultiplier += themeMatch.multiplier;
+            });
+        });
+
+        avgMultiplier = avgMultiplier / (this.gameState.districts.length * 3);
+        totalEffectiveReach = Math.min(100, Math.round(totalEffectiveReach / (3 * this.gameState.districts.length)));
+
+        return {
+            broadcast: broadcast,
+            districtResults: districtResults,
+            totalEffectiveReach: totalEffectiveReach,
+            avgMultiplier: avgMultiplier,
+            overallRating: this.getOverallRating(avgMultiplier, totalEffectiveReach)
+        };
+    }
+
+    getOverallRating(multiplier, reach) {
+        const score = multiplier * 100 + reach / 5;
+        if (score >= 180) return { text: '极佳', class: 'rating-excellent', icon: '⭐⭐⭐' };
+        if (score >= 140) return { text: '良好', class: 'rating-good', icon: '⭐⭐' };
+        if (score >= 100) return { text: '一般', class: 'rating-normal', icon: '⭐' };
+        if (score >= 60) return { text: '较差', class: 'rating-poor', icon: '📉' };
+        return { text: '很差', class: 'rating-bad', icon: '❌' };
+    }
+
     getStatName(stat) {
         const names = {
             power: '⚡电量',
@@ -492,9 +780,170 @@ class UndergroundRadioGame {
         return names[stat] || stat;
     }
 
+    getThemeName(themeId) {
+        return GameData.programThemes[themeId] || themeId;
+    }
+
     selectProgram(slot, programId) {
         this.gameState.schedule[slot] = programId;
         this.renderSchedule();
+    }
+
+    getBroadcastSlotAnalysis(broadcastId) {
+        const broadcast = GameData.broadcastMessages.find(m => m.id === broadcastId);
+        if (!broadcast) return null;
+
+        const slotResults = [];
+
+        ['morning', 'afternoon', 'evening'].forEach(slot => {
+            const districtBreakdown = [];
+            let slotEffectiveReach = 0;
+            let slotAvgMultiplier = 0;
+            let preferredDistricts = [];
+            let dislikedDistricts = [];
+
+            this.gameState.districts.forEach(district => {
+                const districtType = this.getDistrictType(district.id);
+                const reach = this.getAudienceReach(slot, districtType);
+                const themeMatch = this.getThemeMatch(broadcast.themes, districtType);
+                const effectiveReach = Math.round(reach.total * themeMatch.multiplier);
+
+                districtBreakdown.push({
+                    district: district,
+                    districtType: districtType,
+                    reach: reach,
+                    themeMatch: themeMatch,
+                    effectiveReach: effectiveReach,
+                    trustWeight: district.trust / 100
+                });
+
+                slotEffectiveReach += effectiveReach * (district.trust / 100);
+                slotAvgMultiplier += themeMatch.multiplier;
+
+                if (themeMatch.level === 'preferred') preferredDistricts.push(district.name);
+                if (themeMatch.level === 'disliked') dislikedDistricts.push(district.name);
+            });
+
+            slotAvgMultiplier = slotAvgMultiplier / this.gameState.districts.length;
+            slotEffectiveReach = Math.min(100, Math.round(slotEffectiveReach / this.gameState.districts.length));
+
+            slotResults.push({
+                slot: slot,
+                slotInfo: GameData.timeSlots[slot],
+                districtBreakdown: districtBreakdown,
+                effectiveReach: slotEffectiveReach,
+                avgMultiplier: slotAvgMultiplier,
+                rating: this.getOverallRating(slotAvgMultiplier, slotEffectiveReach),
+                preferredDistricts: preferredDistricts,
+                dislikedDistricts: dislikedDistricts
+            });
+        });
+
+        slotResults.sort((a, b) => b.effectiveReach - a.effectiveReach);
+
+        return {
+            broadcast: broadcast,
+            slotResults: slotResults,
+            bestSlot: slotResults[0],
+            worstSlot: slotResults[slotResults.length - 1],
+            avgReach: Math.min(100, Math.round(slotResults.reduce((s, r) => s + r.effectiveReach, 0) / 3))
+        };
+    }
+
+    renderBroadcastReachAnalysis(broadcastId) {
+        const container = document.getElementById('broadcastReachAnalysis');
+        if (!broadcastId) {
+            container.innerHTML = '<div class="empty-analysis">📊 选择消息后可查看各时段传播效果分析</div>';
+            return;
+        }
+
+        const analysis = this.getBroadcastSlotAnalysis(broadcastId);
+        if (!analysis) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const { broadcast, slotResults, bestSlot, worstSlot, avgReach } = analysis;
+        const bestIsMuchBetter = bestSlot.effectiveReach - worstSlot.effectiveReach >= 20;
+
+        let summaryHtml = `
+            <div class="reach-analysis-summary">
+                <span class="avg-reach-badge">📊 平均触达 ${avgReach}%</span>
+                <span class="best-slot-badge">✨ 最佳时段: ${bestSlot.slotInfo.name} (${bestSlot.effectiveReach}%)</span>
+        `;
+        if (bestIsMuchBetter) {
+            summaryHtml += `<span class="warn-slot-badge">⚠️ 时段差异显著: 最佳比最差高 ${bestSlot.effectiveReach - worstSlot.effectiveReach}%</span>`;
+        }
+        summaryHtml += `</div>`;
+
+        const slotCardsHtml = slotResults.map(result => {
+            let cardClass = '';
+            if (result.slot === bestSlot.slot) cardClass = 'best';
+            else if (result.slot === worstSlot.slot && bestIsMuchBetter) cardClass = 'poor';
+
+            const reachColorClass = result.rating.class;
+            const multiplierPercent = Math.round(result.avgMultiplier * 100);
+
+            const districtListHtml = result.districtBreakdown.map(db => {
+                const matchClass = db.themeMatch.level;
+                const reachLevel = db.effectiveReach >= 60 ? 'good' : db.effectiveReach >= 30 ? 'neutral' : 'bad';
+                return `
+                    <div class="district-match-item ${reachLevel}">
+                        <span>${db.districtType ? db.districtType.icon : ''} ${db.district.name}</span>
+                        <span>收听${db.reach.total}% × 主题${Math.round(db.themeMatch.multiplier * 100)}% = <strong>${db.effectiveReach}%</strong></span>
+                    </div>
+                `;
+            }).join('');
+
+            const tagHtml = result.slot === bestSlot.slot ? '<span class="best-slot-badge" style="font-size:10px; padding:2px 6px">推荐</span>' :
+                            (result.slot === worstSlot.slot && bestIsMuchBetter ? '<span class="warn-slot-badge" style="font-size:10px; padding:2px 6px">避免</span>' : '');
+
+            return `
+                <div class="slot-analysis-card ${cardClass}" data-slot="${result.slot}">
+                    <div class="slot-analysis-header">
+                        <span>${result.slotInfo.name}</span>
+                        ${tagHtml}
+                    </div>
+                    <div class="slot-analysis-score ${reachColorClass}">
+                        ${result.rating.icon} ${result.effectiveReach}%
+                    </div>
+                    <div class="slot-analysis-detail">
+                        主题匹配度: <strong class="${result.avgMultiplier >= 1.3 ? 'positive' : result.avgMultiplier <= 0.7 ? 'negative' : ''}">${multiplierPercent}%</strong>
+                        ${result.preferredDistricts.length > 0 ? `<br>👍 ${result.preferredDistricts.join('、')}` : ''}
+                        ${result.dislikedDistricts.length > 0 ? `<br>👎 ${result.dislikedDistricts.join('、')}` : ''}
+                    </div>
+                    <div class="district-match-list">
+                        ${districtListHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="reach-analysis-title">📊 时段传播效果分析</div>
+            ${summaryHtml}
+            <div class="slot-analysis-grid">
+                ${slotCardsHtml}
+            </div>
+            <div style="margin-top:12px; padding:10px; background:rgba(0,0,0,0.2); border-radius:6px;">
+                <div style="font-size:12px; color:#aaa; margin-bottom:6px">
+                    📌 <strong>说明：</strong>同一消息在不同时段的传播效果差异巨大。医院周边偏好<strong style="color:#2ecc71">医疗/安抚/新闻</strong>，避难所偏好<strong style="color:#2ecc71">安抚/新闻/娱乐</strong>，工业区偏好<strong style="color:#2ecc71">预警/新闻/天气</strong>。
+                </div>
+                <div style="font-size:11px; color:#888">
+                    错误时段播出重要消息会导致传播效果下降，尤其是紧急预警、医疗援助等关键信息，请务必选择合适时段。
+                </div>
+            </div>
+            <div style="margin-top:10px;">
+                <label style="font-size:12px; color:#ccc; display:block; margin-bottom:5px">🔘 选择播报时段 (影响实际效果)：</label>
+                <select id="broadcastSlotSelect" style="width:100%; padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid #666; border-radius:6px; color:#fff; font-size:13px">
+                    ${slotResults.map((r, i) => `
+                        <option value="${r.slot}" ${i === 0 ? 'selected' : ''}>
+                            ${r.slotInfo.name} - 预计触达 ${r.effectiveReach}% ${r.slot === bestSlot.slot ? '(推荐)' : r.slot === worstSlot.slot && bestIsMuchBetter ? '(不推荐)' : ''}
+                        </option>
+                    `).join('')}
+                </select>
+            </div>
+        `;
     }
 
     selectBroadcast(broadcastId) {
@@ -506,13 +955,22 @@ class UndergroundRadioGame {
         const effectsText = Object.entries(msg.effects)
             .map(([k, v]) => `${this.getStatName(k)} ${v > 0 ? '+' : ''}${v}`)
             .join(' | ');
+
+        const themesHtml = msg.themes && msg.themes.length > 0 ? `
+            <div style="margin:8px 0">
+                ${msg.themes.map(t => `<span class="theme-tag">${this.getThemeName(t)}</span>`).join(' ')}
+            </div>
+        ` : '';
         
         preview.innerHTML = `
             <h4 style="color:#e94560; margin-bottom:10px">${msg.title}</h4>
             <p>${msg.content}</p>
-            <p style="color:#888; font-size:12px; margin-top:10px">效果: ${effectsText} | 耗电: ⚡${msg.power}</p>
+            ${themesHtml}
+            <p style="color:#888; font-size:12px; margin-top:10px">基础效果: ${effectsText} | 耗电: ⚡${msg.power}</p>
+            <p style="color:#f39c12; font-size:11px; margin-top:5px">💡 实际效果会根据所选时段的听众触达率和主题匹配度动态调整</p>
         `;
-        
+
+        this.renderBroadcastReachAnalysis(broadcastId);
         this.renderBroadcasts();
     }
 
@@ -525,18 +983,46 @@ class UndergroundRadioGame {
             return;
         }
 
-        this.applyEffects(msg.effects);
+        const slotSelect = document.getElementById('broadcastSlotSelect');
+        const selectedSlot = slotSelect ? slotSelect.value : 'evening';
+
+        const analysis = this.getBroadcastSlotAnalysis(msg.id);
+        const slotResult = analysis ? analysis.slotResults.find(r => r.slot === selectedSlot) : null;
+        const effectiveness = slotResult ? (slotResult.effectiveReach / 100) : 0.6;
+
+        const actualEffects = {};
+        Object.entries(msg.effects).forEach(([k, v]) => {
+            if (k === 'trust') {
+                actualEffects[k] = Math.round(v * effectiveness);
+            } else {
+                actualEffects[k] = Math.round(v * effectiveness * 10) / 10;
+            }
+        });
+
+        this.applyEffects(actualEffects);
         this.gameState.status.power -= msg.power;
         this.gameState.todayActions.broadcastDone = true;
 
-        const effectTags = Object.entries(msg.effects)
+        const effectTags = Object.entries(actualEffects)
             .filter(([_, v]) => v !== 0)
             .map(([k, v]) => ({
                 text: `${this.getStatName(k)} ${v > 0 ? '+' : ''}${v}`,
                 type: v > 0 ? 'positive' : 'negative'
             }));
 
-        this.showEvent('播报完成', `已播报：${msg.title}`, effectTags);
+        const slotName = GameData.timeSlots[selectedSlot].name;
+        const effectivenessPercent = Math.round(effectiveness * 100);
+        const effectivenessTag = effectivenessPercent >= 70 ? { text: `🎯 时段契合度 ${effectivenessPercent}% (${slotName})`, type: 'positive' } :
+                                 effectivenessPercent >= 40 ? { text: `🎯 时段契合度 ${effectivenessPercent}% (${slotName})`, type: '' } :
+                                 { text: `⚠️ 时段契合度仅 ${effectivenessPercent}% (${slotName})，传播效果受限`, type: 'negative' };
+
+        effectTags.unshift(effectivenessTag);
+
+        const slotInfo = slotResult ? `\n\n📊 传播详情：\n• 播出时段: ${slotName}\n• 综合触达: ${slotResult.effectiveReach}%\n• 主题匹配: ${Math.round(slotResult.avgMultiplier * 100)}%` : '';
+
+        this.showEvent('播报完成', `已播报：${msg.title}${slotInfo}`, effectTags);
+        
+        document.getElementById('broadcastReachAnalysis').innerHTML = '<div class="empty-analysis">✅ 今日播报已完成，明日可继续播报</div>';
         this.renderAll();
     }
 
@@ -685,24 +1171,88 @@ class UndergroundRadioGame {
             rumor: 0,
             fatigue: 0,
             morale: 0,
-            food: 0
+            food: 0,
+            trust: 0
         };
 
+        const districtTrustDelta = {};
+        this.gameState.districts.forEach(d => {
+            districtTrustDelta[d.id] = 0;
+        });
+
+        const scheduleReport = [];
         let totalPowerUsed = 0;
+
         ['morning', 'afternoon', 'evening'].forEach(slot => {
             const programId = this.gameState.schedule[slot];
             if (programId) {
                 const program = GameData.programTypes.find(p => p.id === programId);
                 if (program) {
                     totalPowerUsed += program.power;
+
+                    const reachInfo = this.getProgramReachInfo(programId, slot);
+                    const globalMultiplier = reachInfo ? (reachInfo.totalEffectiveReach / 100) : 0.5;
+
+                    const slotReport = {
+                        slot: slot,
+                        program: program.name,
+                        globalMultiplier: Math.round(globalMultiplier * 100),
+                        districtEffects: []
+                    };
+
+                    this.gameState.districts.forEach(district => {
+                        const districtType = this.getDistrictType(district.id);
+                        const reach = this.getAudienceReach(slot, districtType);
+                        const themeMatch = this.getThemeMatch(program.themes, districtType);
+                        const districtMultiplier = (reach.total / 100) * themeMatch.multiplier;
+                        const trustWeight = district.trust / 100;
+                        const effectiveMultiplier = districtMultiplier * (0.5 + trustWeight * 0.5);
+
+                        Object.entries(program.effects).forEach(([k, v]) => {
+                            if (k === 'trust') {
+                                districtTrustDelta[district.id] += v * effectiveMultiplier;
+                            } else if (dayEffects[k] !== undefined) {
+                                const weightedValue = v * effectiveMultiplier * (district.trust / 500);
+                                dayEffects[k] += weightedValue;
+                            }
+                        });
+
+                        slotReport.districtEffects.push({
+                            district: district.name,
+                            districtType: districtType ? districtType.name : '',
+                            reach: reach.total,
+                            themeMatch: themeMatch.level,
+                            multiplier: Math.round(effectiveMultiplier * 100)
+                        });
+                    });
+
                     Object.entries(program.effects).forEach(([k, v]) => {
-                        if (dayEffects[k] !== undefined) {
-                            dayEffects[k] += v;
+                        if (k !== 'trust' && dayEffects[k] !== undefined) {
+                            const baseValue = dayEffects[k];
+                            const globalBoost = v * globalMultiplier * 0.3;
+                            dayEffects[k] = baseValue + globalBoost;
                         }
                     });
+
+                    scheduleReport.push(slotReport);
                 }
             }
         });
+
+        Object.entries(districtTrustDelta).forEach(([districtId, delta]) => {
+            const district = this.gameState.districts.find(d => d.id === districtId);
+            if (district) {
+                district.trust = Math.max(0, Math.min(100, district.trust + Math.round(delta)));
+            }
+        });
+
+        ['power', 'noise', 'rumor', 'fatigue', 'morale', 'food'].forEach(k => {
+            if (dayEffects[k] !== undefined) {
+                dayEffects[k] = Math.round(dayEffects[k] * 10) / 10;
+            }
+        });
+
+        this.gameState.lastScheduleReport = scheduleReport;
 
         dayEffects.power -= totalPowerUsed;
 
@@ -826,8 +1376,33 @@ class UndergroundRadioGame {
             }
         });
 
+        let scheduleReportHtml = '';
+        if (this.gameState.lastScheduleReport && this.gameState.lastScheduleReport.length > 0) {
+            scheduleReportHtml = '<div style="margin-top:20px; text-align:left"><h4 style="color:#3498db; margin-bottom:10px">📻 节目传播效果报告</h4>';
+            this.gameState.lastScheduleReport.forEach(report => {
+                const slotName = GameData.timeSlots[report.slot].name;
+                const multiplierClass = report.globalMultiplier >= 70 ? 'positive' : report.globalMultiplier >= 40 ? '' : 'negative';
+                scheduleReportHtml += `
+                    <div style="background:rgba(0,0,0,0.3); border-radius:6px; padding:10px; margin-bottom:8px">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px">
+                            <strong>${slotName}：${report.program}</strong>
+                            <span class="effect-tag ${multiplierClass}">综合触达 ${report.globalMultiplier}%</span>
+                        </div>
+                        <div style="font-size:11px; color:#aaa; display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:4px">
+                            ${report.districtEffects.map(de => {
+                                const matchClass = de.themeMatch === 'preferred' ? 'color:#2ecc71' : de.themeMatch === 'disliked' ? 'color:#e74c3c' : 'color:#f39c12';
+                                const multClass = de.multiplier >= 60 ? 'color:#2ecc71' : de.multiplier >= 30 ? 'color:#f39c12' : 'color:#e74c3c';
+                                return `<div>📌 ${de.district} (${de.districtType})：收听率${de.reach}%，<span style="${matchClass}">主题${de.themeMatch === 'preferred' ? '匹配' : de.themeMatch === 'disliked' ? '冲突' : '一般'}</span>，<span style="${multClass}">效果${de.multiplier}%</span></div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            scheduleReportHtml += '</div>';
+        }
+
         document.getElementById('modalTitle').textContent = `第 ${this.gameState.day} 天结算 - ${summary}`;
-        document.getElementById('modalText').textContent = '今日运营已结束，以下是今日总结：';
+        document.getElementById('modalText').innerHTML = '今日运营已结束，以下是今日总结：' + scheduleReportHtml;
         document.getElementById('modalEffects').innerHTML = effectsHtml;
         document.getElementById('eventModal').classList.add('active');
     }

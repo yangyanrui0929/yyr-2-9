@@ -1,14 +1,140 @@
 // ??????????????????????????????
 const GameData = {
+    programThemes: {
+        entertainment: '🎭 娱乐',
+        news: '📰 新闻',
+        medical: '🏥 医疗',
+        comfort: '💚 安抚',
+        warning: '⚠️ 预警',
+        knowledge: '📚 知识',
+        weather: '🌤️ 天气',
+        emergency: '🚨 紧急'
+    },
+
+    audienceGroups: {
+        workers: { name: '👷 工人', icon: '👷' },
+        patients: { name: '🏥 病人', icon: '🏥' },
+        refugees: { name: '🏠 避难者', icon: '🏠' },
+        elders: { name: '👴 老人', icon: '👴' },
+        children: { name: '👶 儿童', icon: '👶' },
+        medicalStaff: { name: '⚕️ 医护', icon: '⚕️' },
+        general: { name: '👥 普通市民', icon: '👥' }
+    },
+
+    timeSlots: {
+        morning: {
+            id: 'morning',
+            name: '🌅 早间时段',
+            hours: '06:00-12:00',
+            desc: '清晨时段，人们准备开始一天的活动'
+        },
+        afternoon: {
+            id: 'afternoon',
+            name: '☀️ 午间时段',
+            hours: '12:00-18:00',
+            desc: '中午时段，人们在工作或休息'
+        },
+        evening: {
+            id: 'evening',
+            name: '🌙 晚间时段',
+            hours: '18:00-24:00',
+            desc: '夜晚时段，人们放松休息'
+        }
+    },
+
+    districtTypes: {
+        hospital: {
+            id: 'hospital',
+            name: '医院周边',
+            icon: '🏥',
+            desc: '医疗资源集中区域，病人和医护人员较多',
+            primaryAudience: ['patients', 'medicalStaff', 'elders'],
+            preferredThemes: ['medical', 'comfort', 'news'],
+            dislikedThemes: ['entertainment', 'warning']
+        },
+        shelter: {
+            id: 'shelter',
+            name: '避难所区',
+            icon: '🏠',
+            desc: '临时避难所，聚集大量无家可归的幸存者',
+            primaryAudience: ['refugees', 'children', 'elders'],
+            preferredThemes: ['comfort', 'news', 'entertainment'],
+            dislikedThemes: ['warning', 'emergency']
+        },
+        industrial: {
+            id: 'industrial',
+            name: '工业区',
+            icon: '🏭',
+            desc: '工厂和生产区域，工人集中',
+            primaryAudience: ['workers', 'general'],
+            preferredThemes: ['warning', 'news', 'weather'],
+            dislikedThemes: ['entertainment', 'comfort']
+        },
+        residential: {
+            id: 'residential',
+            name: '居民区',
+            icon: '🏘️',
+            desc: '普通市民居住区域',
+            primaryAudience: ['general', 'elders', 'children'],
+            preferredThemes: ['news', 'entertainment', 'comfort'],
+            dislikedThemes: []
+        },
+        downtown: {
+            id: 'downtown',
+            name: '市中心',
+            icon: '🏙️',
+            desc: '城市中心区域，各类人群混合',
+            primaryAudience: ['general', 'workers', 'medicalStaff'],
+            preferredThemes: ['news', 'knowledge', 'weather'],
+            dislikedThemes: []
+        }
+    },
+
+    audienceSchedule: {
+        morning: {
+            workers: 0.9,
+            patients: 0.5,
+            refugees: 0.6,
+            elders: 0.8,
+            children: 0.4,
+            medicalStaff: 0.7,
+            general: 0.7
+        },
+        afternoon: {
+            workers: 0.3,
+            patients: 0.7,
+            refugees: 0.8,
+            elders: 0.6,
+            children: 0.7,
+            medicalStaff: 0.4,
+            general: 0.5
+        },
+        evening: {
+            workers: 0.8,
+            patients: 0.8,
+            refugees: 0.9,
+            elders: 0.9,
+            children: 0.8,
+            medicalStaff: 0.6,
+            general: 0.9
+        }
+    },
+
+    themePreferenceMultiplier: {
+        preferred: 1.5,
+        neutral: 1.0,
+        disliked: 0.5
+    },
+
     programTypes: [
-        { id: 'music', name: '🎵 音乐节目', effects: { morale: 5, noise: 3, fatigue: -2 }, power: 5, desc: '播放轻松音乐' },
-        { id: 'news', name: '📰 新闻播报', effects: { morale: 3, rumor: -5, trust: 5 }, power: 8, desc: '播报真实新闻' },
-        { id: 'story', name: '📖 故事时间', effects: { morale: 8, fatigue: -5 }, power: 4, desc: '讲述精彩故事' },
-        { id: 'education', name: '📚 知识讲座', effects: { morale: 4, trust: 8 }, power: 6, desc: '科普生存知识' },
-        { id: 'interview', name: '🎙️ 幸存者访谈', effects: { morale: 6, trust: 10, rumor: -8 }, power: 10, desc: '采访幸存者' },
-        { id: 'weather', name: '🌤️ 天气预报', effects: { morale: 2, trust: 3 }, power: 3, desc: '播报天气情况' },
-        { id: 'silent', name: '🔇 静默时段', effects: { fatigue: -10, noise: -10 }, power: 1, desc: '关闭广播休息' },
-        { id: 'emergency', name: '🚨 紧急广播', effects: { morale: -5, rumor: -15, trust: 15 }, power: 15, desc: '发布紧急通知' }
+        { id: 'music', name: '🎵 音乐节目', themes: ['entertainment', 'comfort'], effects: { morale: 5, noise: 3, fatigue: -2 }, power: 5, desc: '播放轻松音乐' },
+        { id: 'news', name: '📰 新闻播报', themes: ['news', 'knowledge'], effects: { morale: 3, rumor: -5, trust: 5 }, power: 8, desc: '播报真实新闻' },
+        { id: 'story', name: '📖 故事时间', themes: ['entertainment', 'comfort'], effects: { morale: 8, fatigue: -5 }, power: 4, desc: '讲述精彩故事' },
+        { id: 'education', name: '📚 知识讲座', themes: ['knowledge', 'medical'], effects: { morale: 4, trust: 8 }, power: 6, desc: '科普生存知识' },
+        { id: 'interview', name: '🎙️ 幸存者访谈', themes: ['news', 'comfort'], effects: { morale: 6, trust: 10, rumor: -8 }, power: 10, desc: '采访幸存者' },
+        { id: 'weather', name: '🌤️ 天气预报', themes: ['weather', 'warning'], effects: { morale: 2, trust: 3 }, power: 3, desc: '播报天气情况' },
+        { id: 'silent', name: '🔇 静默时段', themes: [], effects: { fatigue: -10, noise: -10 }, power: 1, desc: '关闭广播休息' },
+        { id: 'emergency', name: '🚨 紧急广播', themes: ['emergency', 'warning', 'news'], effects: { morale: -5, rumor: -15, trust: 15 }, power: 15, desc: '发布紧急通知' }
     ],
 
     questionBank: [
@@ -95,16 +221,16 @@ const GameData = {
     ],
 
     broadcastMessages: [
-        { id: 'safe_zone', title: '📍 安全区通知', content: '城西区已确认安全，幸存者可前往临时避难所。', effects: { morale: 8, trust: 10, rumor: -5 }, power: 10 },
-        { id: 'food_depot', title: '🍞 物资发放', content: '今日下午三点在中心广场发放应急物资，请携带身份证明。', effects: { morale: 12, trust: 8 }, power: 8 },
-        { id: 'danger_warning', title: '⚠️ 危险警告', content: '工业区发现不明泄漏，请所有居民远离该区域。', effects: { morale: -3, trust: 15, rumor: -10 }, power: 12 },
-        { id: 'rescue_team', title: '🚑 救援队消息', content: '搜救队已救出12名被困幸存者，正在送往医疗点。', effects: { morale: 15, trust: 12 }, power: 8 },
-        { id: 'water_supply', title: '💧 供水恢复', content: '城东片区供水已恢复，请节约用水。', effects: { morale: 10, trust: 8 }, power: 6 },
-        { id: 'curfew', title: '🌙 宵禁通知', content: '今晚十点至明日六点实行宵禁，请勿外出。', effects: { morale: -5, trust: 5, rumor: 5 }, power: 5 },
-        { id: 'missing_person', title: '🔍 寻人启事', content: '寻找5岁女童小雨，穿红色外套，知情者请联系广播站。', effects: { morale: 3, trust: 10 }, power: 7 },
-        { id: 'weather_alert', title: '🌪️ 天气预警', content: '预计明日有强暴雨，请做好防护准备。', effects: { morale: -2, trust: 12 }, power: 6 },
-        { id: 'medical_help', title: '🏥 医疗援助', content: '临时医疗点24小时开放，有需要的居民可前往就诊。', effects: { morale: 8, trust: 10 }, power: 7 },
-        { id: 'power_restore', title: '⚡ 电力恢复', content: '城南片区今晚八点恢复供电。', effects: { morale: 12, trust: 10 }, power: 5 }
+        { id: 'safe_zone', title: '📍 安全区通知', themes: ['news', 'comfort'], content: '城西区已确认安全，幸存者可前往临时避难所。', effects: { morale: 8, trust: 10, rumor: -5 }, power: 10 },
+        { id: 'food_depot', title: '🍞 物资发放', themes: ['news', 'comfort'], content: '今日下午三点在中心广场发放应急物资，请携带身份证明。', effects: { morale: 12, trust: 8 }, power: 8 },
+        { id: 'danger_warning', title: '⚠️ 危险警告', themes: ['warning', 'emergency', 'news'], content: '工业区发现不明泄漏，请所有居民远离该区域。', effects: { morale: -3, trust: 15, rumor: -10 }, power: 12 },
+        { id: 'rescue_team', title: '🚑 救援队消息', themes: ['news', 'comfort', 'medical'], content: '搜救队已救出12名被困幸存者，正在送往医疗点。', effects: { morale: 15, trust: 12 }, power: 8 },
+        { id: 'water_supply', title: '💧 供水恢复', themes: ['news', 'comfort'], content: '城东片区供水已恢复，请节约用水。', effects: { morale: 10, trust: 8 }, power: 6 },
+        { id: 'curfew', title: '🌙 宵禁通知', themes: ['warning', 'news'], content: '今晚十点至明日六点实行宵禁，请勿外出。', effects: { morale: -5, trust: 5, rumor: 5 }, power: 5 },
+        { id: 'missing_person', title: '🔍 寻人启事', themes: ['news', 'comfort'], content: '寻找5岁女童小雨，穿红色外套，知情者请联系广播站。', effects: { morale: 3, trust: 10 }, power: 7 },
+        { id: 'weather_alert', title: '🌪️ 天气预警', themes: ['weather', 'warning'], content: '预计明日有强暴雨，请做好防护准备。', effects: { morale: -2, trust: 12 }, power: 6 },
+        { id: 'medical_help', title: '🏥 医疗援助', themes: ['medical', 'comfort', 'news'], content: '临时医疗点24小时开放，有需要的居民可前往就诊。', effects: { morale: 8, trust: 10 }, power: 7 },
+        { id: 'power_restore', title: '⚡ 电力恢复', themes: ['news', 'comfort'], content: '城南片区今晚八点恢复供电。', effects: { morale: 12, trust: 10 }, power: 5 }
     ],
 
     equipmentList: [
@@ -116,11 +242,11 @@ const GameData = {
     ],
 
     districts: [
-        { id: 'east', name: '城东', trust: 60 },
-        { id: 'west', name: '城西', trust: 50 },
-        { id: 'south', name: '城南', trust: 55 },
-        { id: 'north', name: '城北', trust: 45 },
-        { id: 'center', name: '市中心', trust: 70 }
+        { id: 'east', name: '城东', type: 'industrial', trust: 60 },
+        { id: 'west', name: '城西', type: 'shelter', trust: 50 },
+        { id: 'south', name: '城南', type: 'residential', trust: 55 },
+        { id: 'north', name: '城北', type: 'hospital', trust: 45 },
+        { id: 'center', name: '市中心', type: 'downtown', trust: 70 }
     ],
 
     survivorNames: ['李明', '王芳', '张伟', '刘洋', '陈静', '杨帆', '赵磊', '周婷', '吴强', '郑雪'],
