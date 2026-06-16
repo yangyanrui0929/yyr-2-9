@@ -363,6 +363,93 @@ body {
     border-radius: 3px;
 }
 
+.theme-tag.theme-preferred {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+}
+
+.theme-tag.theme-disliked {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+}
+
+.program-audience {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 4px;
+    align-items: center;
+}
+
+.program-audience-label {
+    font-size: 10px;
+    color: #888;
+    margin-right: 2px;
+}
+
+.audience-mini-tag {
+    font-size: 10px;
+    padding: 1px 5px;
+    background: rgba(52, 152, 219, 0.2);
+    color: #3498db;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.district-reach-item-expanded {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+
+.district-reach-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.district-details {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.district-audiences {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    font-size: 10px;
+}
+
+.district-audiences-label {
+    color: #888;
+    margin-right: 2px;
+    font-size: 10px;
+}
+
+.district-themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    align-items: center;
+    font-size: 10px;
+}
+
+.district-themes-label {
+    color: #888;
+    margin-right: 4px;
+    font-size: 10px;
+    min-width: 40px;
+}
+
 .program-rating {
     margin-top: 6px;
     padding: 4px 8px;

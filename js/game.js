@@ -295,10 +295,23 @@ class UndergroundRadioGame {
                     .join(', ');
 
                 const reachInfo = this.getProgramReachInfo(program.id, slot);
+                const audienceBreakdown = this.getProgramAudienceBreakdown(program.id, slot);
+                
                 const ratingHtml = reachInfo ? `
                     <div class="program-rating ${reachInfo.overallRating.class}">
                         ${reachInfo.overallRating.icon} ${reachInfo.overallRating.text}
                         <span class="reach-score">预计触达: ${reachInfo.totalEffectiveReach}%</span>
+                    </div>
+                ` : '';
+
+                const audienceHtml = audienceBreakdown && audienceBreakdown.length > 0 ? `
+                    <div class="program-audience">
+                        <span class="program-audience-label">👥 触达人群:</span>
+                        ${audienceBreakdown.map(a => `
+                            <span class="audience-mini-tag" title="${a.name} 相对触达 ${a.percentage}%">
+                                ${a.icon} ${a.percentage}%
+                            </span>
+                        `).join('')}
                     </div>
                 ` : '';
 
@@ -311,6 +324,7 @@ class UndergroundRadioGame {
                 btn.innerHTML = `
                     <div>${program.name}</div>
                     ${themesHtml}
+                    ${audienceHtml}
                     <div class="program-effects">${effectsText} | ⚡${program.power}</div>
                     ${ratingHtml}
                 `;
@@ -323,9 +337,13 @@ class UndergroundRadioGame {
             if (current) {
                 const program = GameData.programTypes.find(p => p.id === current);
                 const reachInfo = this.getProgramReachInfo(current, slot);
+                const audienceBreakdown = this.getProgramAudienceBreakdown(current, slot);
                 if (program && reachInfo) {
+                    const audienceText = audienceBreakdown && audienceBreakdown.length > 0
+                        ? audienceBreakdown.slice(0, 2).map(a => `${a.icon}`).join('')
+                        : '';
                     slotDisplay.innerHTML = `
-                        ${program.name}
+                        ${program.name} ${audienceText}
                         <span class="slot-rating ${reachInfo.overallRating.class}">
                             ${reachInfo.overallRating.icon} 触达${reachInfo.totalEffectiveReach}%
                         </span>
@@ -337,6 +355,89 @@ class UndergroundRadioGame {
                 slotDisplay.textContent = '未安排';
             }
         });
+    }
+
+    getSlotDistrictAudience(slot, districtType) {
+        if (!districtType) return [];
+        const schedule = GameData.audienceSchedule[slot];
+        if (!schedule) return [];
+
+        const audiences = [];
+        districtType.primaryAudience.forEach(audId => {
+            const rate = schedule[audId] || 0;
+            if (rate > 0.3) {
+                audiences.push({
+                    id: audId,
+                    ...GameData.audienceGroups[audId],
+                    rate: rate,
+                    isPrimary: true
+                });
+            }
+        });
+
+        districtType.primaryAudience.forEach(audId => {
+            const rate = schedule[audId] || 0;
+            if (rate <= 0.3 && rate > 0) {
+                audiences.push({
+                    id: audId,
+                    ...GameData.audienceGroups[audId],
+                    rate: rate,
+                    isPrimary: true
+                });
+            }
+        });
+
+        Object.keys(GameData.audienceGroups).forEach(audId => {
+            if (!districtType.primaryAudience.includes(audId)) {
+                const rate = schedule[audId] || 0;
+                if (rate > 0.5) {
+                    audiences.push({
+                        id: audId,
+                        ...GameData.audienceGroups[audId],
+                        rate: rate,
+                        isPrimary: false
+                    });
+                }
+            }
+        });
+
+        audiences.sort((a, b) => b.rate - a.rate);
+        return audiences.slice(0, 4);
+    }
+
+    getProgramAudienceBreakdown(programId, slot) {
+        const program = GameData.programTypes.find(p => p.id === programId);
+        if (!program) return [];
+
+        const allAudienceWeights = {};
+
+        this.gameState.districts.forEach(district => {
+            const districtType = this.getDistrictType(district.id);
+            const reach = this.getAudienceReach(slot, districtType);
+            const themeMatch = this.getThemeMatch(program.themes, districtType);
+
+            reach.audiences.forEach(aud => {
+                if (!allAudienceWeights[aud.id]) {
+                    allAudienceWeights[aud.id] = {
+                        id: aud.id,
+                        ...GameData.audienceGroups[aud.id],
+                        totalWeight: 0
+                    };
+                }
+                const effectiveWeight = aud.weight * themeMatch.multiplier * (district.trust / 100);
+                allAudienceWeights[aud.id].totalWeight += effectiveWeight;
+            });
+        });
+
+        const result = Object.values(allAudienceWeights)
+            .sort((a, b) => b.totalWeight - a.totalWeight)
+            .slice(0, 4);
+
+        const maxWeight = result.length > 0 ? result[0].totalWeight : 1;
+        return result.map(a => ({
+            ...a,
+            percentage: maxWeight > 0 ? Math.round((a.totalWeight / maxWeight) * 100) : 0
+        }));
     }
 
     renderSlotAudienceInfo(container, slot) {
@@ -358,10 +459,12 @@ class UndergroundRadioGame {
             const districtType = this.getDistrictType(district.id);
             if (districtType) {
                 const reach = this.getAudienceReach(slot, districtType);
+                const slotAudiences = this.getSlotDistrictAudience(slot, districtType);
                 districtSummary.push({
                     district: district,
                     districtType: districtType,
-                    reach: reach
+                    reach: reach,
+                    slotAudiences: slotAudiences
                 });
             }
         });
@@ -384,19 +487,47 @@ class UndergroundRadioGame {
                     </div>
                 </div>
                 <div class="audience-info-section">
-                    <div class="audience-info-title">🏙️ 各城区收听情况</div>
+                    <div class="audience-info-title">🏙️ 各城区收听情况 & 关注主题</div>
                     <div class="district-reach-list">
-                        ${districtSummary.map(d => `
-                            <div class="district-reach-item">
-                                <span class="district-type-icon">${d.districtType.icon}</span>
-                                <span class="district-reach-name">${d.district.name}</span>
-                                <span class="district-type-label">${d.districtType.name}</span>
-                                <div class="district-reach-bar">
-                                    <div class="district-reach-fill" style="width:${d.reach.total}%"></div>
+                        ${districtSummary.map(d => {
+                            const preferredThemesHtml = d.districtType.preferredThemes && d.districtType.preferredThemes.length > 0
+                                ? `<div class="district-themes">
+                                     <span class="district-themes-label">👍 关注:</span>
+                                     ${d.districtType.preferredThemes.map(t => `<span class="theme-tag theme-preferred">${this.getThemeName(t)}</span>`).join('')}
+                                   </div>` : '';
+                            const dislikedThemesHtml = d.districtType.dislikedThemes && d.districtType.dislikedThemes.length > 0
+                                ? `<div class="district-themes">
+                                     <span class="district-themes-label">👎 排斥:</span>
+                                     ${d.districtType.dislikedThemes.map(t => `<span class="theme-tag theme-disliked">${this.getThemeName(t)}</span>`).join('')}
+                                   </div>` : '';
+                            const audienceHtml = d.slotAudiences && d.slotAudiences.length > 0
+                                ? `<div class="district-audiences">
+                                     <span class="district-audiences-label">👥 听众:</span>
+                                     ${d.slotAudiences.map(a => `
+                                        <span class="audience-mini-tag" title="${a.name} 收听率 ${Math.round(a.rate * 100)}%">
+                                            ${a.icon} ${Math.round(a.rate * 100)}%
+                                        </span>
+                                     `).join('')}
+                                   </div>` : '';
+                            return `
+                            <div class="district-reach-item district-reach-item-expanded">
+                                <div class="district-reach-header">
+                                    <span class="district-type-icon">${d.districtType.icon}</span>
+                                    <span class="district-reach-name">${d.district.name}</span>
+                                    <span class="district-type-label">${d.districtType.name}</span>
+                                    <div class="district-reach-bar">
+                                        <div class="district-reach-fill" style="width:${d.reach.total}%"></div>
+                                    </div>
+                                    <span class="district-reach-value">${d.reach.total}%</span>
                                 </div>
-                                <span class="district-reach-value">${d.reach.total}%</span>
+                                <div class="district-details">
+                                    ${audienceHtml}
+                                    ${preferredThemesHtml}
+                                    ${dislikedThemesHtml}
+                                </div>
                             </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                 </div>
             </div>
